@@ -1,4 +1,5 @@
 import joi from "joi";
+import connection from "../db/db.js";
 
 const signUpSchema = joi.object({
   name: joi.string().min(1).required(),
@@ -37,4 +38,31 @@ function authValidationSignIn (req, res, next){
 
 }
 
-export { authValidationSignUp, authValidationSignIn}
+async function authToken (req, res, next){
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  
+  if(!token){
+    return res.sendStatus(401);
+  }
+ 
+  try {
+    const session = (await connection.query(`SELECT token FROM sessions WHERE token = '${token}';`)).rows[0]   
+     
+    if(session === undefined){
+       return res.sendStatus(422);
+    }
+  
+    const user = (await connection.query(`SELECT "userId" FROM sessions WHERE token = '${token}';`)).rows[0];
+    
+    res.locals.user = user.userId;
+    res.locals.session = session.token;
+    
+    next()
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
+
+}
+
+export { authValidationSignUp, authValidationSignIn, authToken}
