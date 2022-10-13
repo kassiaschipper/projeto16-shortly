@@ -5,9 +5,7 @@ import { nanoid } from "nanoid";
 async function shortenUrls(req, res){
 const { url } = req.body;
 
-const { session, user } = res.locals //token e userId
-
-//console.log(session, user) 
+//const { session, user } = res.locals //token e userId
 
 try {
     const shortUrl = nanoid(8);
@@ -20,13 +18,22 @@ try {
    console.log(error);
    res.sendStatus(422); 
 }
+}
 
+async function listUrlById(req, res){
+    const { id } = req.params; 
 
-
+    try {
+        const listUrls = (await connection.query(`SELECT id,"shortUrl", url FROM links WHERE id=$1;`,[id])).rows;
+        return res.send(listUrls)
+    } catch (error) {
+        console.log(error);
+        return res.sendStatus(500);
+    }
 
 }
 
     
-export { shortenUrls }
+export { shortenUrls, listUrlById }
 
 
