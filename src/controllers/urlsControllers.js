@@ -1,39 +1,68 @@
 import connection from "../db/db.js";
 import { nanoid } from "nanoid";
 
+async function shortenUrls(req, res) {
+  const { url } = req.body;
 
-async function shortenUrls(req, res){
-const { url } = req.body;
+  //const { session, user } = res.locals //token e userId
 
-//const { session, user } = res.locals //token e userId
-
-try {
+  try {
     const shortUrl = nanoid(8);
-    
-    const insertLink = await connection.query(`INSERT INTO links (url, "createAt", "shortUrl", "visitCount") VALUES ($1, CURRENT_DATE, $2,$3);`,[url, shortUrl, null]);    
 
-    res.status(201).send({shortUrl:shortUrl});
-    
-} catch (error) {
-   console.log(error);
-   res.sendStatus(422); 
+    const insertLink = await connection.query(
+      `INSERT INTO links (url, "createAt", "shortUrl", "visitCount") VALUES ($1, CURRENT_DATE, $2,$3);`,
+      [url, shortUrl, null]
+    );
+
+    res.status(201).send({ shortUrl: shortUrl });
+  } catch (error) {
+    console.log(error);
+    res.sendStatus(422);
+  }
 }
-}
 
-async function listUrlById(req, res){
-    const { id } = req.params; 
+async function listUrlById(req, res) {
+  const { id } = req.params;
 
-    try {
-        const listUrls = (await connection.query(`SELECT id,"shortUrl", url FROM links WHERE id=$1;`,[id])).rows;
-        return res.send(listUrls)
-    } catch (error) {
-        console.log(error);
-        return res.sendStatus(500);
+  try {
+    const listUrls = (
+      await connection.query(
+        `SELECT id,"shortUrl", url FROM links WHERE id=$1;`,
+        [id]
+      )
+    ).rows[0];
+
+    if (listUrls === undefined) {
+      return res.sendStatus(404);
     }
 
+    return res.status(200).send(listUrls);
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
 }
 
+async function openShortUrl(req, res) {
+  const { shortUrl } = req.params;
+  
+  try {
+    const findShortUrl = (await connection.query(`SELECT * FROM links WHERE "shortUrl"=$1;`, [shortUrl])).rows[0];
+        
+    if (findShortUrl === undefined) {
+      return res.sendStatus(404);
+    }
     
-export { shortenUrls, listUrlById }
+    const countVisit = await connection.query(`UPDATE links SET "visitCount" = $1 WHERE "shortUrl"='${shortUrl}';`, [findShortUrl.visitCount + 1])
 
+    const originalUrl = findShortUrl.url;
 
+    return res.redirect(originalUrl);
+
+  } catch (error) {
+    console.log(error);
+    return res.sendStatus(500);
+  }
+}
+
+export { shortenUrls, listUrlById, openShortUrl };
