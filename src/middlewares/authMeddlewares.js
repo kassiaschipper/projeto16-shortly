@@ -46,14 +46,14 @@ async function authToken (req, res, next){
   }
  
   try {
-    const session = (await connection.query(`SELECT token FROM sessions WHERE token = '${token}';`)).rows[0]   
-     
-    if(session === undefined){
-       return res.sendStatus(422);
-    }
-  
     const user = (await connection.query(`SELECT "userId" FROM sessions WHERE token = '${token}';`)).rows[0];
     
+    if(user === undefined){
+      return res.sendStatus(404);
+    }
+    const session = (await connection.query(`SELECT token FROM sessions WHERE token = '${token}';`)).rows[0]   
+   
+  
     res.locals.user = user.userId;
     res.locals.session = session.token;
     
