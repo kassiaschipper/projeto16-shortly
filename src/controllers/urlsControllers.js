@@ -1,6 +1,7 @@
 import connection from "../db/db.js";
 import { nanoid } from "nanoid";
 
+
 async function shortenUrls(req, res) {
   const { url } = req.body;
 
@@ -13,6 +14,12 @@ async function shortenUrls(req, res) {
       `INSERT INTO links (url, "createAt", "shortUrl", "visitCount", "userId") VALUES ($1, CURRENT_DATE, $2,$3, $4);`,
       [url, shortUrl, null, user]
     );
+    //add no ranking
+    const findShortUrl = (
+      await connection.query(`SELECT * FROM links WHERE "shortUrl"=$1;`, [shortUrl])
+    ).rows[0];
+
+    await connection.query(`INSERT INTO ranking ("userId", "urlId", "countVisit" ) VALUES ($1, $2, $3);`, [findShortUrl.userId,findShortUrl.id, 0]);
 
     res.status(201).send({ shortUrl: shortUrl });
   } catch (error) {
@@ -56,13 +63,22 @@ async function openShortUrl(req, res) {
     if (findShortUrl === undefined) {
       return res.sendStatus(404);
     }
+    const countVisit = findShortUrl.visitCount + 1;
 
-    const countVisit = await connection.query(
+    await connection.query(
       `UPDATE links SET "visitCount" = $1 WHERE "shortUrl"='${shortUrl}';`,
-      [findShortUrl.visitCount + 1]
+      [countVisit]
     );
-
     const originalUrl = findShortUrl.url;
+   
+  // const ranking = (await connection.query(`SELECT * FROM ranking WHERE "urlId" = $1;`,[findShortUrl.id])).rowCount;
+   //console.log(ranking)
+  await connection.query(`UPDATE ranking SET "countVisit"=$1 WHERE "urlId"=$2;`, [countVisit,findShortUrl.id])
+  /*if(ranking === 0){
+    await connection.query(`INSERT INTO ranking ("userId", "urlId", "countVisit" ) VALUES ($1, $2, $3);`, [findShortUrl.userId,findShortUrl.id, countVisit]);
+   }else{
+    
+   }*/
 
     return res.redirect(originalUrl);
   } catch (error) {

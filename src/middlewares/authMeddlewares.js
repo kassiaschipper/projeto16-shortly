@@ -31,7 +31,7 @@ function authValidationSignIn (req, res, next){
   const  validation = signInSchema.validate(req.body);
 
   if(validation.error){
-    console.log(validade.error.details);
+    console.log(validation.error.details);
     return res.sendStatus(422);
   }
   next();
